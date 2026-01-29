@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG Badge Editor V24 - Perfect Tag Alignment</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --badge-width: 450px;
+            --badge-height: 280px;
+            
+            --bg-dark: #121212;
+            --bg-panel: #1f1f1f;
+            --accent-color: #ffcc66;
+            --boxed-text-color: #000000;
+
+            /* Shadow Vars */
+            --txt-shadow-x: 2px;
+            --txt-shadow-y: 2px;
+            --txt-shadow-blur: 4px;
+            --txt-shadow-col: rgba(0,0,0,1);
+
+            /* Stroke Vars */
+            --st-main-w: 0px;
+            --st-main-c: #000000;
+            --st-sec-w: 0px;
+            --st-sec-c: #000000;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #888; border-bottom: 1px solid #444; padding-bottom: 5px; width: 100%; }
+        label { font-size: 11px; color: #aaa; display: block; margin-bottom: 2px;}
+
+        /* --- UI ELEMENTS --- */
+        .global-panel {
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 1300px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+            border: 1px solid #333;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .panel-section { display: flex; flex-direction: column; gap: 8px; }
+        .row { display: flex; gap: 10px; align-items: center; }
+        
+        input[type="text"] { background: #333; border: 1px solid #444; color: white; padding: 5px; border-radius: 4px; width: 100%; font-family: 'Montserrat', sans-serif; }
+        input[type="number"] { background: #222; border: 1px solid #555; color: #ffcc66; padding: 2px 5px; border-radius: 4px; width: 50px; font-family: monospace; font-size: 11px; text-align: right; }
+        input[type="range"] { flex-grow: 1; cursor: pointer; }
+        input[type="color"] { border: none; width: 100%; height: 30px; background: none; cursor: pointer; }
+
+        .btn {
+            background: #555; border: none; padding: 10px; color: white; 
+            border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;
+            font-size: 12px; transition: 0.2s; font-family: 'Montserrat', sans-serif;
+            text-align: center; position: relative;
+        }
+        .btn:hover { background: #666; }
+        .btn-blue { background: #3498db; }
+        .btn-red { background: #e74c3c; }
+        .btn-green { background: #27ae60; }
+        .btn-purple { background: #9b59b6; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; width: auto; }
+        .btn-mini { padding: 0 5px; font-size: 10px; height: 20px; line-height: 20px; background: #444; min-width: 35px;}
+
+        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-input-overlay { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+
+        .control-grid { display: grid; gap: 5px; }
+        .slider-row { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 2px 5px; border-radius: 4px; }
+        .slider-row label { width: 15px; margin: 0; font-weight: bold; font-size: 10px; color: #fff; }
+        
+        #main-list {
+            display: flex; flex-wrap: wrap; gap: 30px; justify-content: center;
+            width: 100%; max-width: 1400px; margin-bottom: 50px;
+        }
+
+        .badge-block {
+            display: flex; flex-direction: column; gap: 10px;
+            background: #1a1a1a; padding: 15px; border-radius: 10px; border: 1px solid #333; align-items: center;
+        }
+
+        /* --- THE BADGE --- */
+        .badge {
+            width: var(--badge-width);
+            height: var(--badge-height);
+            background: #000;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            user-select: none; flex-shrink: 0; overflow: hidden;
+            isolation: isolate;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .layer-char { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background-color: #1e1e1e; overflow: hidden; }
+        .layer-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; background-color: #2c3e50; 
+            filter: drop-shadow(4px 0 8px rgba(0,0,0,0.6));
+            pointer-events: none; 
+        }
+        
+        .bg-div-obj { width: 100%; height: 100%; background-position: center; background-repeat: no-repeat; will-change: transform; }
+        .char-contain { background-size: contain; }
+        .bg-cover { background-size: cover; }
+        .logo-contain { background-size: contain; }
+
+        .overlay-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        
+        .editable-text {
+            text-shadow: var(--txt-shadow-x) var(--txt-shadow-y) var(--txt-shadow-blur) var(--txt-shadow-col);
+            position: absolute; pointer-events: auto; outline: none; cursor: text;
+            white-space: pre-wrap; word-break: break-word;
+            color: var(--accent-color); font-weight: 800; line-height: 1.1;
+        }
+
+        /* Stroke Logic */
+        .stroke-main { -webkit-text-stroke: var(--st-main-w) var(--st-main-c); paint-order: stroke fill; }
+        .stroke-sec { -webkit-text-stroke: var(--st-sec-w) var(--st-sec-c); paint-order: stroke fill; }
+        
+        /* --- TAGS FIXED V24 (Writing Mode + Anchor) --- */
+        .tag-strip {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 40px;
+            display: flex; flex-direction: column; justify-content: space-between; 
+            align-items: center;
+            padding: 15px 0; /* Padding creates the "inset" from the edge */
+            z-index: 11;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Container for the text to handle alignment */
+        .tag-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center; /* Center horizontally in strip */
+        }
+
+        .vertical-text {
+            /* Standard CSS Vertical Text */
+            writing-mode: vertical-rl; 
+            text-orientation: mixed;
+            
+            font-size: 11px; font-weight: 700; letter-spacing: 1px;
+            color: var(--accent-color);
+            text-shadow: var(--txt-shadow-x) var(--txt-shadow-y) var(--txt-shadow-blur) var(--txt-shadow-col);
+            white-space: nowrap;
+        }
+        
+        /* Alignment Logic within Vertical Mode */
+        /* text-align: left in vertical-rl means TOP */
+        .tag-top-text .vertical-text { text-align: left; }
+        
+        /* text-align: right in vertical-rl means BOTTOM */
+        .tag-bot-text .vertical-text { text-align: right; }
+
+        .txt-name { top: 20px; left: 50px; font-size: 18px; }
+        .txt-main { top: 50%; transform: translateY(-50%); left: 50px; font-size: 52px; line-height: 0.9; font-weight: 900; }
+        .txt-role { bottom: 45px; left: 50px; font-size: 16px; opacity: 0.9; }
+        .txt-subrole { bottom: 15px; left: 50px; font-size: 14px; }
+        
+        .boxed-text {
+            background-color: var(--accent-color);
+            color: var(--boxed-text-color) !important;
+            padding: 4px 10px; border-radius: 4px;
+            display: inline-block; min-width: 20px; text-align: center;
+            
+            /* Clean Plaques */
+            -webkit-text-stroke: 0 !important;
+            text-shadow: none !important;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* --- SVG CUTOUT --- */
+        .dm-badge-wrapper {
+            position: absolute; top: 55px; left: 50px; 
+            z-index: 12; display: none;
+            width: auto; height: auto;
+        }
+        .badge.is-dm .dm-badge-wrapper { display: flex; align-items: center; justify-content: center; }
+        .badge.is-dm .txt-main { top: 48%; font-size: 48px; }
+
+        .dm-svg-visual { display: block; overflow: visible; }
+        
+        .dm-input-overlay {
+            position: absolute;
+            left: 0; top: 0; width: 100%; height: 100%;
+            font-size: 32px; font-weight: 900;
+            color: transparent; 
+            caret-color: black; 
+            background: transparent;
+            border: none; outline: none;
+            text-align: center;
+            padding: 0 10px; 
+            z-index: 20;
+            white-space: nowrap; overflow: hidden;
+        }
+
+        .logo-container { position: absolute; bottom: 10px; right: 10px; width: 100px; height: 50px; z-index: 15; }
+        .local-controls { width: 100%; background: #252525; padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #444; }
+
+        /* --- Text Popup --- */
+        #text-popup {
+            position: fixed; background: #222; padding: 8px; border-radius: 8px;
+            display: none; z-index: 5000; border: 1px solid #555;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+            flex-direction: column; gap: 8px; align-items: center;
+        }
+        .pop-row { display: flex; gap: 5px; align-items: center; justify-content: center; width: 100%; }
+        #text-popup span { font-size: 12px; font-weight: bold; color: #fff; min-width: 35px; text-align: center; }
+        .pop-btn { background: #444; border:none; color:white; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .pop-btn:hover { background: #666; }
+        .pop-btn-red { background: #c0392b; width: auto; padding: 0 8px; border-radius: 12px; font-size: 10px; }
+        
+        .move-grid { display: grid; grid-template-columns: 24px 24px 24px; grid-template-rows: 24px 24px; gap: 2px; }
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        /* --- A4 SHEET --- */
+        .a4-container { width: 100%; max-width: 1400px; background: #2a2a2a; border: 2px dashed #444; padding: 20px; margin-top: 20px; display: flex; flex-direction: column; align-items: center; }
+        .a4-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .sheet-wrapper { width: 850px; min-height: 1100px; background: white; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; transform-origin: top center; }
+        .sheet-wrapper .badge { transform-origin: top left; transform: scale(0.85); margin-right: -67px; margin-bottom: -42px; box-shadow: none; border: 1px solid #ccc; }
+
+        /* --- PRINT --- */
+        @page { size: A4; margin: 10mm; }
+        @media print {
+            .global-panel, #main-list, .a4-header, #text-popup { display: none !important; }
+            body { background: white; padding: 0; margin: 0; }
+            .a4-container { border: none; margin: 0; padding: 0; width: 100%; max-width: none; background: white; }
+            .sheet-wrapper { width: 100% !important; box-shadow: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0; }
+            .sheet-wrapper .badge { transform: scale(0.8) !important; margin-right: -85px !important; margin-bottom: -50px !important; page-break-inside: avoid; break-inside: avoid; border: none !important; box-shadow: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="global-panel">
+        <div class="panel-section">
+            <h2>Текст и Цвет</h2>
+            <label>Тег Верх</label><input type="text" id="tag-top" oninput="updateTags()">
+            <label>Тег Низ</label><input type="text" id="tag-bottom" oninput="updateTags()">
+            <div class="row">
+                <div><label>Акцент</label><input type="color" id="col-accent" oninput="updateColors()"></div>
+                <div><label>Плашки</label><input type="color" id="col-box" oninput="updateColors()"></div>
+            </div>
+            <label>Форма угла</label>
+            <div class="row">
+                <input type="range" min="30" max="90" value="65" oninput="updateShape(this.value)">
+                <input type="number" id="inp-shape" value="65" oninput="updateShape(this.value)">
+            </div>
+        </div>
+        
+        <div class="panel-section">
+            <h2>Обводка Текста (Outer)</h2>
+            <label>Крупный текст (Main)</label>
+            <div class="control-grid">
+                <div class="slider-row"><label>W</label>
+                    <input type="range" id="st-main-w" min="0" max="10" step="0.5" value="0" oninput="syncStroke('main')">
+                    <input type="number" id="inp-st-main-w" value="0" step="0.5" oninput="syncStroke('main')">
+                    <button class="btn btn-mini" onclick="resetStroke('main')">R</button>
+                </div>
+                <div class="slider-row"><label>C</label>
+                    <input type="color" id="st-main-c" value="#000000" oninput="syncStroke('main')">
+                </div>
+            </div>
+            <label style="margin-top:5px">Мелкий текст (Sec)</label>
+            <div class="control-grid">
+                <div class="slider-row"><label>W</label>
+                    <input type="range" id="st-sec-w" min="0" max="10" step="0.5" value="0" oninput="syncStroke('sec')">
+                    <input type="number" id="inp-st-sec-w" value="0" step="0.5" oninput="syncStroke('sec')">
+                    <button class="btn btn-mini" onclick="resetStroke('sec')">R</button>
+                </div>
+                <div class="slider-row"><label>C</label>
+                    <input type="color" id="st-sec-c" value="#000000" oninput="syncStroke('sec')">
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel-section">
+            <div class="row" style="justify-content:space-between">
+                <h2>Тень Текста</h2>
+                <input type="color" id="shadow-col" value="#000000" style="width:30px; height:20px;" oninput="updateShadowState()">
+            </div>
+            <div class="control-grid">
+                <div class="slider-row"><label>X</label>
+                    <input type="range" id="shadow-x" min="-10" max="10" value="2" oninput="syncShadowInput('x', this.value)">
+                    <input type="number" id="inp-sh-x" value="2" oninput="syncShadowInput('x', this.value)">
+                    <button class="btn btn-mini" onclick="resetShadow('x', 2)">R</button>
+                </div>
+                <div class="slider-row"><label>Y</label>
+                    <input type="range" id="shadow-y" min="-10" max="10" value="2" oninput="syncShadowInput('y', this.value)">
+                    <input type="number" id="inp-sh-y" value="2" oninput="syncShadowInput('y', this.value)">
+                    <button class="btn btn-mini" onclick="resetShadow('y', 2)">R</button>
+                </div>
+                <div class="slider-row"><label>B</label>
+                    <input type="range" id="shadow-blur" min="0" max="20" value="4" oninput="syncShadowInput('blur', this.value)">
+                    <input type="number" id="inp-sh-b" value="4" oninput="syncShadowInput('blur', this.value)">
+                    <button class="btn btn-mini" onclick="resetShadow('blur', 4)">R</button>
+                </div>
+                <div class="slider-row"><label>A</label> 
+                    <input type="range" id="shadow-alpha" min="0" max="1" step="0.05" value="1" oninput="syncShadowInput('alpha', this.value)">
+                    <input type="number" id="inp-sh-a" value="1" step="0.05" oninput="syncShadowInput('alpha', this.value)">
+                    <button class="btn btn-mini" onclick="resetShadow('alpha', 1)">R</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="row" style="justify-content:space-between">
+                <h2>Общий Фон (BG)</h2>
+                <button class="btn btn-mini" onclick="resetGlobalTransform('bg')">Reset</button>
+            </div>
+            <div class="row">
+                <div class="upload-btn-wrapper">
+                    <button class="btn btn-blue btn-sm">Загрузить</button>
+                    <input type="file" class="file-input-overlay" accept="image/*" onchange="handleGlobalImg(this, 'bg')" onclick="this.value=null">
+                </div>
+                <button class="btn btn-red btn-sm" onclick="deleteGlobalImg('bg')">X</button>
+            </div>
+            <div class="control-grid">
+                <div class="slider-row"><label>X</label>
+                    <input type="range" id="glob-bg-x" min="-300" max="300" value="0" oninput="updateGlobalTr('bg', 'x', this.value)">
+                    <input type="number" id="inp-glob-bg-x" value="0" oninput="updateGlobalTr('bg', 'x', this.value)">
+                </div>
+                <div class="slider-row"><label>Y</label>
+                    <input type="range" id="glob-bg-y" min="-300" max="300" value="0" oninput="updateGlobalTr('bg', 'y', this.value)">
+                    <input type="number" id="inp-glob-bg-y" value="0" oninput="updateGlobalTr('bg', 'y', this.value)">
+                </div>
+                <div class="slider-row"><label>S</label>
+                    <input type="range" id="glob-bg-scale" min="0.1" max="3" step="0.1" value="1" oninput="updateGlobalTr('bg', 'scale', this.value)">
+                    <input type="number" id="inp-glob-bg-scale" value="1" step="0.1" oninput="updateGlobalTr('bg', 'scale', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="row" style="justify-content:space-between">
+                <h2>Логотип (Logo)</h2>
+                <button class="btn btn-mini" onclick="resetGlobalTransform('logo')">Reset</button>
+            </div>
+            <div class="row">
+                 <div class="upload-btn-wrapper">
+                    <button class="btn btn-blue btn-sm">Загрузить</button>
+                    <input type="file" class="file-input-overlay" accept="image/*" onchange="handleGlobalImg(this, 'logo')" onclick="this.value=null">
+                </div>
+                <button class="btn btn-red btn-sm" onclick="deleteGlobalImg('logo')">X</button>
+            </div>
+             <div class="control-grid">
+                <div class="slider-row"><label>X</label>
+                    <input type="range" id="glob-logo-x" min="-300" max="300" value="0" oninput="updateGlobalTr('logo', 'x', this.value)">
+                    <input type="number" id="inp-glob-logo-x" value="0" oninput="updateGlobalTr('logo', 'x', this.value)">
+                </div>
+                <div class="slider-row"><label>Y</label>
+                    <input type="range" id="glob-logo-y" min="-300" max="300" value="0" oninput="updateGlobalTr('logo', 'y', this.value)">
+                    <input type="number" id="inp-glob-logo-y" value="0" oninput="updateGlobalTr('logo', 'y', this.value)">
+                </div>
+                <div class="slider-row"><label>S</label>
+                    <input type="range" id="glob-logo-scale" min="0.1" max="3" step="0.1" value="1" oninput="updateGlobalTr('logo', 'scale', this.value)">
+                    <input type="number" id="inp-glob-logo-scale" value="1" step="0.1" oninput="updateGlobalTr('logo', 'scale', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h2>Меню</h2>
+            <div class="row">
+                <button class="btn btn-blue" onclick="addPlayer()">+ Игрок</button>
+                <button class="btn btn-red" onclick="removePlayer()">- Игрок</button>
+            </div>
+            <div style="margin-top:auto">
+                <button class="btn btn-red" onclick="resetAll()" style="margin-top:10px">Полный Сброс</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-list"></div>
+
+    <div class="a4-container" id="preview-mode">
+        <div class="a4-header">
+            <h2 style="border:none; margin:0; color:#fff;">Лист А4 (Превью)</h2>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-purple btn-sm" onclick="refreshA4()">Обновить Превью</button>
+                <button class="btn btn-blue btn-sm" style="font-size:14px; padding: 5px 15px;" onclick="printSheet()">Печать / Сохранить в PDF</button>
+            </div>
+        </div>
+        <div id="a4-sheet" class="sheet-wrapper"></div>
+    </div>
+
+    <div id="text-popup">
+        <div class="pop-row">
+            <button class="pop-btn" onmousedown="changeFontSize(-1)">-</button>
+            <span id="font-val">12px</span>
+            <button class="pop-btn" onmousedown="changeFontSize(1)">+</button>
+        </div>
+        <div class="move-grid">
+            <button class="pop-btn btn-up" title="Up" onmousedown="moveText(0, -1)">▲</button>
+            <button class="pop-btn btn-left" title="Left" onmousedown="moveText(-1, 0)">◀</button>
+            <button class="pop-btn btn-down" title="Down" onmousedown="moveText(0, 1)">▼</button>
+            <button class="pop-btn btn-right" title="Right" onmousedown="moveText(1, 0)">▶</button>
+        </div>
+        <button class="pop-btn pop-btn-red" title="Сброс Стиля" onmousedown="resetFont()">Reset</button>
+    </div>
+
+    <script>
+        const DB = {
+            dbName: 'RPGBadgeDB_V24', 
+            version: 1, db: null,
+            init: function() { return new Promise((r, j) => { const q = indexedDB.open(this.dbName, this.version); q.onupgradeneeded = (e) => { const db = e.target.result; if(!db.objectStoreNames.contains('images')) db.createObjectStore('images'); if(!db.objectStoreNames.contains('state')) db.createObjectStore('state'); }; q.onsuccess = (e) => { this.db = e.target.result; r(); }; q.onerror = (e) => j(e); }); },
+            saveState: function(k, d) { if(!this.db) return; const tx = this.db.transaction(['state'], 'readwrite'); tx.objectStore('state').put(d, k); },
+            loadState: function(k) { return new Promise(r => { if(!this.db) r(null); const tx = this.db.transaction(['state'], 'readonly'); const q = tx.objectStore('state').get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(null); }); },
+            saveImage: function(k, d) { const tx = this.db.transaction(['images'], 'readwrite'); tx.objectStore('images').put(d, k); },
+            loadImage: function(k) { return new Promise(r => { const tx = this.db.transaction(['images'], 'readonly'); const q = tx.objectStore('images').get(k); q.onsuccess = () => r(q.result); }); },
+            clearAll: function() { const tx = this.db.transaction(['images', 'state'], 'readwrite'); tx.objectStore('images').clear(); tx.objectStore('state').clear(); return new Promise(r => tx.oncomplete = r); }
+        };
+
+        const defaultTr = { x: 0, y: 0, scale: 1, rotation: 0 };
+        const defDm = { name: 'Имя Мастера', main: 'МАСТЕР', role: 'Система', sub: 'Сеттинг', dmText: 'DM', imgTr: { ...defaultTr }, font: {}, pos: {} };
+        const defPlayer = { name: 'Имя Игрока', main: 'ГЕРОЙ', role: 'Класс', sub: 'Раса', imgTr: { ...defaultTr }, font: {}, pos: {} };
+
+        let appData = { accent: '#ffcc66', boxColor: '#000000', shapeW: 65, shadow: { x: 2, y: 2, blur: 4, col: '#000000', alpha: 1 }, strokeMain: { w: 0, c: '#000000' }, strokeSec: { w: 0, c: '#000000' }, tags: { top: '#TAG 1', bottom: '#TAG 2' }, globalBgTr: { ...defaultTr }, globalLogoTr: { ...defaultTr }, dm: JSON.parse(JSON.stringify(defDm)), players: [JSON.parse(JSON.stringify(defPlayer))] };
+        let imgCache = { bg: null, logo: null, dm: null, players: {} };
+
+        window.onload = async () => { await DB.init(); await loadAll(); };
+
+        async function loadAll() {
+            const s = await DB.loadState('appData');
+            if (s) { appData = s; if(!appData.players || appData.players.length === 0) appData.players = [JSON.parse(JSON.stringify(defPlayer))]; if(!appData.shadow) appData.shadow = { x: 2, y: 2, blur: 4, col: '#000000', alpha: 1 }; if(!appData.strokeMain) appData.strokeMain = { w: 0, c: '#000000' }; if(!appData.strokeSec) appData.strokeSec = { w: 0, c: '#000000' }; if(!appData.dm.dmText) appData.dm.dmText = 'DM'; }
+            imgCache.bg = await DB.loadImage('global_bg'); imgCache.logo = await DB.loadImage('global_logo'); imgCache.dm = await DB.loadImage('dm_img');
+            for(let i=0; i<appData.players.length; i++) { const img = await DB.loadImage(`p_img_${i}`); if(img) imgCache.players[i] = img; }
+            syncInputs(); updateCSS(); renderList(); setTimeout(refreshA4, 1000); 
+        }
+        function saveData() { DB.saveState('appData', appData); }
+
+        function syncInputs() {
+            document.getElementById('tag-top').value = appData.tags.top; document.getElementById('tag-bottom').value = appData.tags.bottom;
+            document.getElementById('col-accent').value = appData.accent; document.getElementById('col-box').value = appData.boxColor;
+            ['x','y','blur','alpha'].forEach(k => { document.getElementById(`shadow-${k}`).value = appData.shadow[k]; const inp = document.getElementById(`inp-sh-${k === 'blur' ? 'b' : k === 'alpha' ? 'a' : k}`); if(inp) inp.value = appData.shadow[k]; });
+            document.getElementById('shadow-col').value = appData.shadow.col;
+            const sSync = (t, obj) => { document.getElementById(`st-${t}-w`).value = obj.w; document.getElementById(`inp-st-${t}-w`).value = obj.w; document.getElementById(`st-${t}-c`).value = obj.c; };
+            sSync('main', appData.strokeMain); sSync('sec', appData.strokeSec);
+            const syncG = (t, obj) => { ['x','y','scale'].forEach(k => { const sl = document.getElementById(`glob-${t}-${k}`); const inp = document.getElementById(`inp-glob-${t}-${k}`); const val = obj[k] !== undefined ? obj[k] : (k==='scale'?1:0); if(sl) sl.value = val; if(inp) inp.value = val; }); };
+            syncG('bg', appData.globalBgTr); syncG('logo', appData.globalLogoTr);
+            document.getElementById('inp-shape').value = appData.shapeW;
+        }
+
+        function hexToRgba(h, a) { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16); return `rgba(${r}, ${g}, ${b}, ${a})`; }
+        function updateCSS() {
+            const r = document.documentElement.style;
+            r.setProperty('--accent-color', appData.accent); r.setProperty('--boxed-text-color', appData.boxColor);
+            const c = hexToRgba(appData.shadow.col, appData.shadow.alpha);
+            r.setProperty('--txt-shadow-x', appData.shadow.x + 'px'); r.setProperty('--txt-shadow-y', appData.shadow.y + 'px'); r.setProperty('--txt-shadow-blur', appData.shadow.blur + 'px'); r.setProperty('--txt-shadow-col', c);
+            r.setProperty('--st-main-w', (appData.strokeMain.w * 2) + 'px'); r.setProperty('--st-main-c', appData.strokeMain.c);
+            r.setProperty('--st-sec-w', (appData.strokeSec.w * 2) + 'px'); r.setProperty('--st-sec-c', appData.strokeSec.c);
+            updateShapePoly(appData.shapeW);
+        }
+
+        function syncShadowInput(p, v) { appData.shadow[p] = p === 'alpha' ? parseFloat(v) : parseInt(v); document.getElementById(`shadow-${p}`).value = v; document.getElementById(`inp-sh-${p === 'blur' ? 'b' : p === 'alpha' ? 'a' : p}`).value = v; updateCSS(); saveData(); }
+        function resetShadow(p, d) { syncShadowInput(p, d); }
+        function updateShadowState() { appData.shadow.col = document.getElementById('shadow-col').value; updateCSS(); saveData(); }
+        function syncStroke(t) { const w = document.getElementById(`st-${t}-w`).value; const c = document.getElementById(`st-${t}-c`).value; const tg = t === 'main' ? appData.strokeMain : appData.strokeSec; tg.w = parseFloat(w); tg.c = c; document.getElementById(`inp-st-${t}-w`).value = w; updateCSS(); saveData(); }
+        function resetStroke(t) { document.getElementById(`st-${t}-w`).value = 0; syncStroke(t); }
+        function updateShapePoly(v) { const t = v; const m = v - 15; const p = `polygon(0% 0%, ${t}% 0%, ${m}% 50%, ${t}% 100%, 0% 100%)`; document.querySelectorAll('.layer-bg').forEach(el => { el.style.clipPath = p; el.style.webkitClipPath = p; }); }
+        function updateShape(v) { appData.shapeW = parseInt(v); document.querySelector('input[type=range][min="30"]').value = v; document.getElementById('inp-shape').value = v; updateShapePoly(appData.shapeW); saveData(); }
+        function updateTags() { appData.tags.top = document.getElementById('tag-top').value; appData.tags.bottom = document.getElementById('tag-bottom').value; saveData(); document.querySelectorAll('.tag-top-text .vertical-text').forEach(e => e.innerText = appData.tags.top); document.querySelectorAll('.tag-bot-text .vertical-text').forEach(e => e.innerText = appData.tags.bottom); }
+        function updateColors() { appData.accent = document.getElementById('col-accent').value; appData.boxColor = document.getElementById('col-box').value; updateCSS(); saveData(); }
+        
+        function updateGlobalTr(t, p, v) { const o = t === 'bg' ? appData.globalBgTr : appData.globalLogoTr; o[p] = parseFloat(v); saveData(); document.getElementById(`glob-${t}-${p}`).value = v; document.getElementById(`inp-glob-${t}-${p}`).value = v; const c = t === 'bg' ? '.global-bg-div' : '.global-logo-div'; document.querySelectorAll(c).forEach(el => applyCSSTransform(el, o)); }
+        function updateCharTr(i, t, p, v) { const d = t === 'dm' ? appData.dm : appData.players[i]; d.imgTr[p] = parseFloat(v); saveData(); document.getElementById(`sld-${p}-${t}-${i}`).value = v; document.getElementById(`inp-${p}-${t}-${i}`).value = v; applyCSSTransform(document.getElementById(`char-img-${t}-${i}`), d.imgTr); }
+        function resetGlobalTransform(t) { const o = t === 'bg' ? appData.globalBgTr : appData.globalLogoTr; o.x=0; o.y=0; o.scale=1; o.rotation=0; saveData(); syncInputs(); updateGlobalTr(t, 'scale', 1); }
+        function resetSingleChar(i, t, p, d) { updateCharTr(i, t, p, d); }
+        function resetCharTransform(i, t) { const d = t === 'dm' ? appData.dm : appData.players[i]; d.imgTr = { x:0, y:0, scale:1, rotation:0 }; saveData(); renderList(); }
+        function applyCSSTransform(e, t) { if(!e) return; e.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(${t.rotation}deg)`; }
+
+        function handleGlobalImg(i, t) { if(!i.files[0]) return; const r = new FileReader(); r.onload = e => { const d = e.target.result; if(t === 'bg') imgCache.bg = d; else imgCache.logo = d; DB.saveImage(t === 'bg' ? 'global_bg' : 'global_logo', d); renderList(); }; r.readAsDataURL(i.files[0]); }
+        function deleteGlobalImg(t) { if(confirm('Удалить?')) { if(t === 'bg') imgCache.bg = null; else imgCache.logo = null; DB.saveImage(t === 'bg' ? 'global_bg' : 'global_logo', null); renderList(); } }
+        function handleCharImg(i, idx, t) { if(!i.files[0]) return; const r = new FileReader(); r.onload = e => { const d = e.target.result; if(t === 'dm') { imgCache.dm = d; DB.saveImage('dm_img', d); } else { imgCache.players[idx] = d; DB.saveImage(`p_img_${idx}`, d); } renderList(); }; r.readAsDataURL(i.files[0]); }
+        function deleteCharImg(idx, t) { if(confirm('Удалить?')) { if(t === 'dm') { imgCache.dm = null; DB.saveImage('dm_img', null); } else { delete imgCache.players[idx]; DB.saveImage(`p_img_${idx}`, null); } renderList(); } }
+
+        function upTxt(e, f, i, t) { if(t === 'dm') appData.dm[f] = e.innerHTML; else appData.players[i][f] = e.innerHTML; saveData(); }
+        function upDMText(e) {
+            appData.dm.dmText = e.innerText;
+            // Sync SVG Text
+            document.getElementById('dm-svg-text').textContent = e.innerText;
+            saveData();
+        }
+
+        let currentTextEl = null;
+        function bindFont(e) { if(e.classList.contains('dm-input-overlay')) return; currentTextEl = e; const p = document.getElementById('text-popup'); const r = e.getBoundingClientRect(); document.getElementById('font-val').innerText = Math.round(parseFloat(window.getComputedStyle(e).fontSize)) + 'px'; p.style.display = 'flex'; p.style.top = (r.top - 70) + 'px'; p.style.left = (r.left - 20) + 'px'; }
+        document.addEventListener('click', e => { const p = document.getElementById('text-popup'); if(currentTextEl && !currentTextEl.contains(e.target) && !p.contains(e.target)) { p.style.display = 'none'; currentTextEl = null; } });
+        function changeFontSize(d) { if(!currentTextEl) return; const n = (parseFloat(window.getComputedStyle(currentTextEl).fontSize) + d) + 'px'; currentTextEl.style.fontSize = n; document.getElementById('font-val').innerText = n; saveDataState(currentTextEl, 'font', n); }
+        function moveText(dx, dy) { if(!currentTextEl) return; const s = window.getComputedStyle(currentTextEl); const l = parseInt(s.left); currentTextEl.style.left = (l + dx) + 'px'; if (s.bottom !== 'auto' && s.top === 'auto') { const b = parseInt(s.bottom); currentTextEl.style.bottom = (b - dy) + 'px'; } else { const t = parseInt(s.top); currentTextEl.style.top = (t + dy) + 'px'; } saveDataState(currentTextEl, 'pos', { left: currentTextEl.style.left, top: currentTextEl.style.top, bottom: currentTextEl.style.bottom }); }
+        function resetFont() { if(!currentTextEl) return; currentTextEl.style.fontSize = ''; currentTextEl.style.left = ''; currentTextEl.style.top = ''; currentTextEl.style.bottom = ''; const d = window.getComputedStyle(currentTextEl).fontSize; document.getElementById('font-val').innerText = d; saveDataState(currentTextEl, 'font', null); saveDataState(currentTextEl, 'pos', null); }
+        function saveDataState(el, cat, val) { const b = el.closest('.badge'); if(!b || !b.id) return; const p = b.id.split('-'); const t = p[1], idx = parseInt(p[2]); let f = null; if(el.classList.contains('txt-name')) f='name'; else if(el.classList.contains('txt-main')) f='main'; else if(el.classList.contains('txt-role')) f='role'; else if(el.classList.contains('txt-subrole')) f='sub'; if(f) { const tgt = t === 'dm' ? appData.dm : appData.players[idx]; if(cat === 'font') { if(!tgt.font) tgt.font = {}; if(val===null) delete tgt.font[f]; else tgt.font[f] = val; } if(cat === 'pos') { if(!tgt.pos) tgt.pos = {}; if(val===null) delete tgt.pos[f]; else tgt.pos[f] = val; } saveData(); } }
+
+        function addPlayer() { if(appData.players.length < 10) { appData.players.push(JSON.parse(JSON.stringify(defPlayer))); saveData(); renderList(); } }
+        function removePlayer() { if(appData.players.length > 0) { const i = appData.players.length - 1; appData.players.pop(); delete imgCache.players[i]; DB.saveImage(`p_img_${i}`, null); saveData(); renderList(); } }
+        async function resetAll() { if(confirm('Сбросить ВСЁ?')) { await DB.clearAll(); location.reload(); } }
+
+        function renderList() {
+            const c = document.getElementById('main-list'); c.innerHTML = '';
+            c.appendChild(createBlock('dm', 0)); appData.players.forEach((_, i) => c.appendChild(createBlock('player', i)));
+            document.querySelectorAll('.global-bg-div').forEach(el => applyCSSTransform(el, appData.globalBgTr));
+            document.querySelectorAll('.global-logo-div').forEach(el => applyCSSTransform(el, appData.globalLogoTr));
+            updateShapePoly(appData.shapeW); refreshA4();
+        }
+
+        function createBlock(type, idx) {
+            const data = type === 'dm' ? appData.dm : appData.players[idx];
+            const isDm = type === 'dm';
+            const imgSrc = type === 'dm' ? imgCache.dm : imgCache.players[idx];
+            const charStyle = `transform: translate(${data.imgTr.x}px, ${data.imgTr.y}px) scale(${data.imgTr.scale}) rotate(${data.imgTr.rotation}deg)`;
+            const badgeId = `badge-${type}-${idx}`;
+            
+            const getStyle = (f) => {
+                let s = ''; if(data.font && data.font[f]) s += `font-size:${data.font[f]};`;
+                if(data.pos && data.pos[f]) { if(data.pos[f].left) s += `left:${data.pos[f].left};`; if(data.pos[f].top) s += `top:${data.pos[f].top};`; if(data.pos[f].bottom) s += `bottom:${data.pos[f].bottom};`; }
+                return s;
+            };
+            const controlRow = (l, p, min, max, st, d) => `<div class="slider-row"><label>${l}</label><input type="range" id="sld-${p}-${type}-${idx}" min="${min}" max="${max}" step="${st}" value="${data.imgTr[p]}" oninput="updateCharTr(${idx}, '${type}', '${p}', this.value)"><input type="number" id="inp-${p}-${type}-${idx}" value="${data.imgTr[p]}" step="${st}" oninput="updateCharTr(${idx}, '${type}', '${p}', this.value)"><button class="btn btn-mini" onclick="resetSingleChar(${idx}, '${type}', '${p}', ${d})">R</button></div>`;
+
+            let dmSvg = '';
+            if(isDm) {
+                const dmTxt = data.dmText || 'DM';
+                dmSvg = `
+                <div class="dm-badge-wrapper">
+                    <svg class="dm-svg-visual" width="80" height="42" viewBox="0 0 80 42">
+                        <defs><mask id="cutout-mask"><rect width="100%" height="100%" fill="white" /><text id="dm-svg-text" x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="Montserrat" font-weight="900" font-size="32" fill="black">${dmTxt}</text></mask></defs>
+                        <rect width="100%" height="100%" fill="var(--accent-color)" mask="url(#cutout-mask)" rx="4" />
+                    </svg>
+                    <div class="dm-input-overlay" contenteditable="true" oninput="upDMText(this)">${dmTxt}</div>
+                </div>`;
+            }
+
+            const div = document.createElement('div'); div.className = 'badge-block';
+            div.innerHTML = `
+                <div class="badge ${isDm?'is-dm':''}" id="${badgeId}">
+                    <div class="layer-char">${imgSrc ? `<div id="char-img-${type}-${idx}" class="bg-div-obj char-contain" style="background-image:url('${imgSrc}'); ${charStyle}"></div>` : '<div style="display:flex;height:100%;align-items:center;justify-content:flex-end;padding-right:40px;font-size:40px;color:#333;">+</div>'}</div>
+                    <div class="layer-bg">${imgCache.bg ? `<div class="bg-div-obj bg-cover global-bg-div" style="background-image:url('${imgCache.bg}')"></div>` : ''}</div>
+                    <div class="overlay-ui">
+                        <div class="tag-strip">
+                            <div class="tag-wrapper tag-top-text stroke-sec"><div class="vertical-text">${appData.tags.top}</div></div>
+                            <div class="tag-wrapper tag-bot-text stroke-sec"><div class="vertical-text">${appData.tags.bottom}</div></div>
+                        </div>
+                        <div class="editable-text txt-name stroke-sec" contenteditable="true" onfocus="bindFont(this)" oninput="upTxt(this, 'name', ${idx}, '${type}')" style="${getStyle('name')}">${data.name}</div>
+                        ${dmSvg}
+                        <div class="editable-text txt-main stroke-main" contenteditable="true" onfocus="bindFont(this)" oninput="upTxt(this, 'main', ${idx}, '${type}')" style="${getStyle('main')}">${data.main}</div>
+                        <div class="editable-text txt-role stroke-sec" contenteditable="true" onfocus="bindFont(this)" oninput="upTxt(this, 'role', ${idx}, '${type}')" style="${getStyle('role')}">${data.role}</div>
+                        <div class="editable-text txt-subrole boxed-text" contenteditable="true" onfocus="bindFont(this)" oninput="upTxt(this, 'sub', ${idx}, '${type}')" style="${getStyle('sub')}">${data.sub}</div>
+                        ${imgCache.logo ? `<div class="logo-container"><div class="bg-div-obj logo-contain global-logo-div" style="background-image:url('${imgCache.logo}')"></div></div>` : ''}
+                    </div>
+                </div>
+                <div class="local-controls">
+                    <div class="row" style="justify-content:space-between"><label style="font-weight:bold; color:#fff">${isDm?'Мастер':'Игрок '+(idx+1)}</label><button class="btn btn-mini" onclick="resetCharTransform(${idx}, '${type}')">Reset All</button></div>
+                    <div class="row"><div class="upload-btn-wrapper"><button class="btn btn-blue btn-sm">Арт</button><input type="file" class="file-input-overlay" accept="image/*" onchange="handleCharImg(this, ${idx}, '${type}')" onclick="this.value=null"></div><button class="btn btn-sm btn-red" style="width:auto" onclick="deleteCharImg(${idx}, '${type}')">X</button></div>
+                    <div class="control-grid">${controlRow('X', 'x', -200, 200, 1, 0)}${controlRow('Y', 'y', -200, 200, 1, 0)}${controlRow('S', 'scale', 0.1, 3, 0.1, 1)}${controlRow('R', 'rotation', -180, 180, 1, 0)}</div>
+                </div>`;
+            return div;
+        }
+
+        function refreshA4() {
+            const container = document.getElementById('a4-sheet'); container.innerHTML = '';
+            const badges = document.querySelectorAll('#main-list .badge');
+            badges.forEach(b => { const clone = b.cloneNode(true); clone.id = 'clone-' + b.id; clone.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable')); container.appendChild(clone); });
+        }
+        function printSheet() { window.print(); }
+    </script>
+</body>
+</html>
